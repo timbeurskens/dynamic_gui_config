@@ -87,10 +87,6 @@ func fieldBreakdown(field reflect.Value, structField reflect.StructField) (struc
 		properties.Name = structField.Name
 	}
 
-	log.Println(field.Kind().String())
-
-	log.Println(field.Type().String())
-
 	if field.Type().Implements(valueControlType) {
 		log.Printf("adding ValueControl object %s implementing %s", field.Type(), valueControlType)
 		return structGuiField{

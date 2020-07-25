@@ -17,12 +17,23 @@ var (
 	tab    *ui.Tab    = nil
 )
 
+// perform a check on global variables
+func check() {
+	if window == nil || tab == nil {
+		panic("window pointer is nil, did you call Start()?")
+	}
+}
+
 func setup() {
 	window = ui.NewWindow(windowName, windowWidth, windowHeight, true)
 	tab = ui.NewTab()
 	window.SetMargined(true)
 	window.SetChild(tab)
-	// todo: handle on window closing
+
+	// prevent destroy of window
+	window.OnClosing(func(w *ui.Window) bool {
+		return true
+	})
 }
 
 func uithread(setupdone chan<- bool) {
@@ -82,15 +93,27 @@ func Register(name string, config interface{}) error {
 		return err
 	}
 
-	ui.QueueMain(func() {
+	// add a new tab to the window and add controls based on struct field
+	NewTab(name, func() ui.Control {
 		if ctrl, err := updateUi(fields); err != nil {
 			log.Println(err)
+			return nil
 		} else {
-			tab.Append(name, ctrl)
+			return ctrl
 		}
 	})
 
 	return nil
+}
+
+// NewTab creates a new tab in the configuration window
+func NewTab(name string, handle func() ui.Control) {
+	ui.QueueMain(func() {
+		ctrl := handle()
+		if ctrl != nil {
+			tab.Append(name, ctrl)
+		}
+	})
 }
 
 // Show displays the configuration window
