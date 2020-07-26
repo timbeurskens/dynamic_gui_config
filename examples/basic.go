@@ -25,6 +25,7 @@ type ApplicationConfig struct {
 	SomeOtherFunction func(int) int
 	SomeUnsignedInt   uint `uiconf:"{\"max\":200}"`
 	notExported       int
+	FloatArray        [3]float64
 }
 
 var Config1 = ApplicationConfig{
