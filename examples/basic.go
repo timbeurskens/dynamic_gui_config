@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -16,10 +17,12 @@ func (i IntNotifier) OnValueChanged() {
 }
 
 type ApplicationConfig struct {
-	SomeFloatValue float64 `uiconf:"{\"name\":\"float value:\",\"min\":0,\"max\":1,\"resolution\":100}"`
-	SomeBool       bool
-	SomeInt        IntNotifier
-	SomeString     string `uiconf:"{\"name\":\"enter text:\"}"`
+	SomeFloatValue    float64 `uiconf:"{\"name\":\"float value:\",\"min\":0,\"max\":1,\"resolution\":100}"`
+	SomeBool          bool
+	SomeInt           IntNotifier
+	SomeString        string `uiconf:"{\"name\":\"enter text:\"}"`
+	SomeFunction      func()
+	SomeOtherFunction func(int) int
 }
 
 var Config1 = ApplicationConfig{
@@ -29,7 +32,11 @@ var Config1 = ApplicationConfig{
 	SomeString:     "default value",
 }
 
-var Config2 = ApplicationConfig{}
+var Config2 = ApplicationConfig{
+	SomeFunction: func() {
+		fmt.Println("Hello, world!")
+	},
+}
 
 func main() {
 	config.Start("config", 640, 400)

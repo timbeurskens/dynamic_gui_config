@@ -12,11 +12,17 @@ var typedKind = map[reflect.Kind]reflect.Type{
 	reflect.Int:     reflect.TypeOf((*int)(nil)),
 	reflect.Bool:    reflect.TypeOf((*bool)(nil)),
 	reflect.String:  reflect.TypeOf((*string)(nil)),
+	reflect.Float32: reflect.TypeOf((*float32)(nil)),
+	reflect.Uint:    reflect.TypeOf((*uint)(nil)),
+	reflect.Func:    reflect.TypeOf((*func())(nil)),
 }
 
 var builtin = map[reflect.Kind]func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl{
 	reflect.Float64: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
-		value := i.(*float64)
+		value, ok := i.(*float64)
+		if !ok {
+			return nil
+		}
 
 		return ValueControlFunc(func() ui.Control {
 			slider := ui.NewSlider(properties.Min*properties.Resolution, properties.Max*properties.Resolution)
@@ -28,8 +34,43 @@ var builtin = map[reflect.Kind]func(i interface{}, properties StructTagPropertie
 			return slider
 		})
 	},
+	reflect.Float32: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
+		value, ok := i.(*float32)
+		if !ok {
+			return nil
+		}
+
+		return ValueControlFunc(func() ui.Control {
+			slider := ui.NewSlider(properties.Min*properties.Resolution, properties.Max*properties.Resolution)
+			slider.SetValue(int(*value * float32(properties.Resolution)))
+			slider.OnChanged(func(slider *ui.Slider) {
+				*value = float32(slider.Value()) / float32(properties.Resolution)
+				go onchanged()
+			})
+			return slider
+		})
+	},
+	reflect.Uint: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
+		value, ok := i.(*uint)
+		if !ok {
+			return nil
+		}
+
+		return ValueControlFunc(func() ui.Control {
+			slider := ui.NewSlider(0, properties.Max)
+			slider.SetValue(int(*value))
+			slider.OnChanged(func(slider *ui.Slider) {
+				*value = uint(slider.Value())
+				go onchanged()
+			})
+			return slider
+		})
+	},
 	reflect.Int: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
-		value := i.(*int)
+		value, ok := i.(*int)
+		if !ok {
+			return nil
+		}
 
 		return ValueControlFunc(func() ui.Control {
 			slider := ui.NewSlider(properties.Min, properties.Max)
@@ -41,8 +82,32 @@ var builtin = map[reflect.Kind]func(i interface{}, properties StructTagPropertie
 			return slider
 		})
 	},
+	reflect.Func: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
+		callbackPtr, ok := i.(*func())
+		if !ok {
+			return nil
+		}
+
+		callback := *callbackPtr
+
+		// extra check for nil function pointers
+		if callback == nil {
+			return nil
+		}
+
+		return ValueControlFunc(func() ui.Control {
+			button := ui.NewButton("trigger")
+			button.OnClicked(func(button *ui.Button) {
+				go callback()
+			})
+			return button
+		})
+	},
 	reflect.String: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
-		value := i.(*string)
+		value, ok := i.(*string)
+		if !ok {
+			return nil
+		}
 
 		return ValueControlFunc(func() ui.Control {
 			textbox := ui.NewEntry()
@@ -55,7 +120,10 @@ var builtin = map[reflect.Kind]func(i interface{}, properties StructTagPropertie
 		})
 	},
 	reflect.Bool: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
-		value := i.(*bool)
+		value, ok := i.(*bool)
+		if !ok {
+			return nil
+		}
 
 		return ValueControlFunc(func() ui.Control {
 			check := ui.NewCheckbox("")

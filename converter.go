@@ -76,6 +76,10 @@ func fieldBreakdown(field reflect.Value, structField reflect.StructField) (struc
 		return structGuiField{}, errors.New("cannot take interface of field pointer")
 	}
 
+	if fieldAddr.IsNil() {
+		return structGuiField{}, errors.New("address of field is nil")
+	}
+
 	fieldAddrIface := fieldAddr.Interface()
 
 	properties, err := parseStructTag(structField.Tag.Get(tagkey))
@@ -105,10 +109,20 @@ func fieldBreakdown(field reflect.Value, structField reflect.StructField) (struc
 			}
 		}
 
-		return structGuiField{
-			Properties: properties,
-			Factory:    builtin[field.Kind()](fieldAddr.Convert(typedKind[field.Kind()]).Interface(), properties, onchanged),
-		}, nil
+		kindType, ok := typedKind[field.Kind()]
+
+		if ok && fieldAddr.Type().ConvertibleTo(kindType) {
+			valueConverted := fieldAddr.Convert(typedKind[field.Kind()])
+
+			if controlFactory := builtin[field.Kind()](valueConverted.Interface(), properties, onchanged); controlFactory != nil {
+				return structGuiField{
+					Properties: properties,
+					Factory:    controlFactory,
+				}, nil
+			}
+		} else {
+			log.Printf("cannot convert %s to %s", fieldAddr.Type(), kindType)
+		}
 	}
 
 	return structGuiField{
