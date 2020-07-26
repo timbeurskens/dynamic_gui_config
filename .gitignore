@@ -91,3 +91,4 @@ fabric.properties
 
 ### Custom
 .idea/
+go.sum
