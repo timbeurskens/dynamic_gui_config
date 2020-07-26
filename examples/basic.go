@@ -23,6 +23,8 @@ type ApplicationConfig struct {
 	SomeString        string `uiconf:"{\"name\":\"enter text:\"}"`
 	SomeFunction      func()
 	SomeOtherFunction func(int) int
+	SomeUnsignedInt   uint `uiconf:"{\"max\":200}"`
+	notExported       int
 }
 
 var Config1 = ApplicationConfig{
@@ -46,10 +48,17 @@ func main() {
 
 	config.Show()
 
-	ticker := time.Tick(time.Second)
+	ticker := time.NewTicker(time.Second)
 
-	for range ticker {
+	go func() {
+		<-time.After(10 * time.Second)
+		ticker.Stop()
+	}()
+
+	for range ticker.C {
 		log.Println("1", Config1)
 		log.Println("2", Config2)
 	}
+
+	config.Stop()
 }

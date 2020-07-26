@@ -17,7 +17,7 @@ var (
 	tab    *ui.Tab    = nil
 )
 
-// perform a check on global variables
+// perform a check on global variables, panic if check fails
 func check() {
 	if window == nil || tab == nil {
 		panic("window pointer is nil, did you call Start()?")
@@ -25,6 +25,13 @@ func check() {
 }
 
 func setup() {
+	ui.OnShouldQuit(func() bool {
+		window.Destroy()
+		window = nil
+		tab = nil
+		return true
+	})
+
 	window = ui.NewWindow(windowName, windowWidth, windowHeight, true)
 	tab = ui.NewTab()
 	window.SetMargined(true)
@@ -88,6 +95,9 @@ func updateUi(fields []structGuiField) (ui.Control, error) {
 
 // Register adds the given struct pointer to the graphical interface as a new tab
 func Register(name string, config interface{}) error {
+	// check ui instances
+	check()
+
 	fields, err := structBreakdown(config)
 	if err != nil {
 		return err
@@ -124,4 +134,9 @@ func Show() {
 // Hide hides the configuration window
 func Hide() {
 	ui.QueueMain(window.Hide)
+}
+
+// Stop triggers the program to quit
+func Stop() {
+	ui.QueueMain(ui.Quit)
 }
