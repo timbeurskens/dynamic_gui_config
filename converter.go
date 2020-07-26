@@ -35,6 +35,18 @@ type ValueControl interface {
 	Create() ui.Control
 }
 
+type horizontalValueControlArray []ValueControl
+
+func (h horizontalValueControlArray) Create() ui.Control {
+	hbox := ui.NewHorizontalBox()
+
+	for _, control := range h {
+		hbox.Append(control.Create(), true)
+	}
+
+	return hbox
+}
+
 type StructTagProperties struct {
 	Name       string `json:"name,omitempty"`
 	Type       string `json:"type,omitempty"`
@@ -66,22 +78,73 @@ func parseStructTag(tag string) (properties StructTagProperties, err error) {
 	return
 }
 
-func fieldBreakdown(field reflect.Value, structField reflect.StructField) (structGuiField, error) {
-	if !field.CanAddr() {
-		return structGuiField{}, errors.New("cannot take address of field")
+func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (ValueControl, error) {
+	if !value.CanAddr() {
+		return nil, errors.New("cannot take address of value")
 	}
-	fieldAddr := field.Addr()
+	fieldAddr := value.Addr()
 
 	if !fieldAddr.CanInterface() {
-		return structGuiField{}, errors.New("cannot take interface of field pointer")
+		return nil, errors.New("cannot take interface of value pointer")
 	}
 
 	if fieldAddr.IsNil() {
-		return structGuiField{}, errors.New("address of field is nil")
+		return nil, errors.New("address of value is nil")
 	}
 
 	fieldAddrIface := fieldAddr.Interface()
 
+	if value.Type().Implements(valueControlType) {
+		log.Printf("adding ValueControl object %s implementing %s", value.Type(), valueControlType)
+		return fieldAddrIface.(ValueControl), nil
+	} else if value.Kind() == reflect.Array {
+		if controlFactory, err := arrayBreakdown(value, properties); err != nil {
+			return nil, err
+		} else {
+			return controlFactory, nil
+		}
+	} else if _, ok := builtin[value.Kind()]; ok {
+		log.Printf("adding builtin object %s kind %s", value.Type(), value.Kind())
+		onchanged := func() {}
+
+		if value.Type().Implements(onChangedType) {
+			iface, ok := fieldAddr.Interface().(UpdateNotifier)
+			if ok {
+				log.Printf("add onchanged handler for type %s", value.Type())
+				onchanged = iface.OnValueChanged
+			}
+		}
+
+		kindType, ok := typedKind[value.Kind()]
+
+		if ok && fieldAddr.Type().ConvertibleTo(kindType) {
+			valueConverted := fieldAddr.Convert(typedKind[value.Kind()])
+
+			if controlFactory := builtin[value.Kind()](valueConverted.Interface(), properties, onchanged); controlFactory != nil {
+				return controlFactory, nil
+			}
+		} else {
+			return nil, errors.New(fmt.Sprintf("cannot convert %s to %s", fieldAddr.Type(), kindType))
+		}
+	}
+	return nil, errors.New(fmt.Sprintf("no match for %s", value.Type()))
+}
+
+func arrayBreakdown(array reflect.Value, properties StructTagProperties) (ValueControl, error) {
+	result := make(horizontalValueControlArray, 0)
+
+	for i := 0; i < array.Len(); i++ {
+		if valueBreakdown, err := fieldValueBreakdown(array.Index(i), properties); err != nil {
+			log.Printf("ignoring %s[%d]: %s", array.Type(), i, err)
+		} else {
+			result = append(result, valueBreakdown)
+		}
+	}
+
+	return result, nil
+}
+
+func fieldBreakdown(field reflect.Value, structField reflect.StructField) (structGuiField, error) {
 	properties, err := parseStructTag(structField.Tag.Get(tagkey))
 	if err != nil {
 		log.Printf("error parsing struct tag: %s", err)
@@ -91,44 +154,14 @@ func fieldBreakdown(field reflect.Value, structField reflect.StructField) (struc
 		properties.Name = structField.Name
 	}
 
-	if field.Type().Implements(valueControlType) {
-		log.Printf("adding ValueControl object %s implementing %s", field.Type(), valueControlType)
+	if factory, err := fieldValueBreakdown(field, properties); err != nil {
+		return structGuiField{}, err
+	} else {
 		return structGuiField{
 			Properties: properties,
-			Factory:    fieldAddrIface.(ValueControl),
+			Factory:    factory,
 		}, nil
-	} else if _, ok := builtin[field.Kind()]; ok {
-		log.Printf("adding builtin object %s kind %s", field.Type(), field.Kind())
-		onchanged := func() {}
-
-		if field.Type().Implements(onChangedType) {
-			iface, ok := fieldAddr.Interface().(UpdateNotifier)
-			if ok {
-				log.Printf("add onchanged handler for type %s", field.Type())
-				onchanged = iface.OnValueChanged
-			}
-		}
-
-		kindType, ok := typedKind[field.Kind()]
-
-		if ok && fieldAddr.Type().ConvertibleTo(kindType) {
-			valueConverted := fieldAddr.Convert(typedKind[field.Kind()])
-
-			if controlFactory := builtin[field.Kind()](valueConverted.Interface(), properties, onchanged); controlFactory != nil {
-				return structGuiField{
-					Properties: properties,
-					Factory:    controlFactory,
-				}, nil
-			}
-		} else {
-			log.Printf("cannot convert %s to %s", fieldAddr.Type(), kindType)
-		}
 	}
-
-	return structGuiField{
-		Properties: StructTagProperties{},
-		Factory:    nil,
-	}, errors.New(fmt.Sprintf("no match for %s", field.Type()))
 }
 
 func structBreakdown(structPtr interface{}) ([]structGuiField, error) {
