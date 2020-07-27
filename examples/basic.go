@@ -38,9 +38,6 @@ var Config1 = ApplicationConfig{
 	SomeBool:       true,
 	SomeInt:        0,
 	SomeString:     "default value",
-}
-
-var Config2 = ApplicationConfig{
 	SomeFunction: func() {
 		fmt.Println("Hello, world!")
 	},
@@ -50,21 +47,12 @@ func main() {
 	config.Start("config", 640, 400)
 
 	_ = config.Register("panel1", &Config1)
-	_ = config.Register("panel2", &Config2)
 
 	config.Show()
 
 	ticker := time.NewTicker(time.Second)
 
-	go func() {
-		<-time.After(10 * time.Second)
-		ticker.Stop()
-	}()
-
 	for range ticker.C {
-		log.Println("1", Config1)
-		log.Println("2", Config2)
+		log.Println(Config1)
 	}
-
-	config.Stop()
 }
