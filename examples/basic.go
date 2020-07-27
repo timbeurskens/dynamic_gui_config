@@ -26,6 +26,11 @@ type ApplicationConfig struct {
 	SomeUnsignedInt   uint `uiconf:"{\"max\":200}"`
 	notExported       int
 	FloatArray        [3]float64
+	SomeSubStruct     struct {
+		SomeSubInt int
+		AnotherInt int
+		SomeBool   bool
+	}
 }
 
 var Config1 = ApplicationConfig{
