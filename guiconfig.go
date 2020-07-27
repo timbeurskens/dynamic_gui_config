@@ -76,50 +76,26 @@ func Start(windowname string, width, height int) {
 	<-done
 }
 
-// runs in ui thread
-func updateUi(fields []structGuiField) (ui.Control, error) {
-	container := ui.NewVerticalBox()
-	container.SetPadded(true)
-
-	for _, field := range fields {
-		hbox := ui.NewHorizontalBox()
-		hbox.SetPadded(true)
-		hbox.Append(ui.NewLabel(field.Properties.Name), false)
-		hbox.Append(field.Factory.Create(), true)
-
-		container.Append(hbox, false)
-	}
-
-	return container, nil
-}
-
 // Register adds the given struct pointer to the graphical interface as a new tab
 func Register(name string, config interface{}) error {
 	// check ui instances
 	check()
 
-	fields, err := structBreakdown(config)
+	fields, err := structBreakdownBase(config)
 	if err != nil {
 		return err
 	}
 
 	// add a new tab to the window and add controls based on struct field
-	NewTab(name, func() ui.Control {
-		if ctrl, err := updateUi(fields); err != nil {
-			log.Println(err)
-			return nil
-		} else {
-			return ctrl
-		}
-	})
+	NewTab(name, fields)
 
 	return nil
 }
 
 // NewTab creates a new tab in the configuration window
-func NewTab(name string, handle func() ui.Control) {
+func NewTab(name string, handle ValueControl) {
 	ui.QueueMain(func() {
-		ctrl := handle()
+		ctrl := handle.Create()
 		if ctrl != nil {
 			tab.Append(name, ctrl)
 		}

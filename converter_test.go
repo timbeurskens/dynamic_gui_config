@@ -16,7 +16,7 @@ func Test_structBreakdown(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    []structGuiField
+		want    controlGroup
 		wantErr bool
 	}{
 		{
@@ -40,7 +40,7 @@ func Test_structBreakdown(t *testing.T) {
 			args: args{
 				structPtr: &struct{}{},
 			},
-			want:    []structGuiField{},
+			want:    controlGroup{},
 			wantErr: false,
 		},
 		{
@@ -54,7 +54,7 @@ func Test_structBreakdown(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := structBreakdown(tt.args.structPtr)
+			got, err := structBreakdownBase(tt.args.structPtr)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("structBreakdown() error = %v, wantErr %v", err, tt.wantErr)
 				return

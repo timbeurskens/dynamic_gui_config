@@ -47,6 +47,19 @@ func (h horizontalValueControlArray) Create() ui.Control {
 	return hbox
 }
 
+type controlGroup []structGuiField
+
+func (c controlGroup) Create() ui.Control {
+	container := ui.NewVerticalBox()
+	container.SetPadded(true)
+
+	for _, field := range c {
+		container.Append(field.Create(), false)
+	}
+
+	return container
+}
+
 type StructTagProperties struct {
 	Name       string `json:"name,omitempty"`
 	Type       string `json:"type,omitempty"`
@@ -58,6 +71,15 @@ type StructTagProperties struct {
 type structGuiField struct {
 	Properties StructTagProperties
 	Factory    ValueControl
+}
+
+func (s structGuiField) Create() ui.Control {
+	hbox := ui.NewHorizontalBox()
+	hbox.SetPadded(true)
+	hbox.Append(ui.NewLabel(s.Properties.Name), false)
+	hbox.Append(s.Factory.Create(), true)
+
+	return hbox
 }
 
 func parseStructTag(tag string) (properties StructTagProperties, err error) {
@@ -102,6 +124,12 @@ func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (V
 			return nil, err
 		} else {
 			return controlFactory, nil
+		}
+	} else if value.Kind() == reflect.Struct {
+		if group, err := structBreakdown(fieldAddr); err != nil {
+			return nil, err
+		} else {
+			return group, nil
 		}
 	} else if _, ok := builtin[value.Kind()]; ok {
 		log.Printf("adding builtin object %s kind %s", value.Type(), value.Kind())
@@ -164,9 +192,12 @@ func fieldBreakdown(field reflect.Value, structField reflect.StructField) (struc
 	}
 }
 
-func structBreakdown(structPtr interface{}) ([]structGuiField, error) {
+func structBreakdownBase(structPtr interface{}) (controlGroup, error) {
 	reflectValue := reflect.ValueOf(structPtr)
+	return structBreakdown(reflectValue)
+}
 
+func structBreakdown(reflectValue reflect.Value) (controlGroup, error) {
 	if reflectValue.Kind() != reflect.Ptr {
 		return nil, errors.New(fmt.Sprintf("structPtr should be a pointer to a struct type, got %d", reflectValue.Kind()))
 	}
@@ -178,7 +209,7 @@ func structBreakdown(structPtr interface{}) ([]structGuiField, error) {
 		return nil, errors.New(fmt.Sprintf("structPtr should be a pointer to a struct type, got pointer to %s", value.Kind()))
 	}
 
-	result := make([]structGuiField, 0)
+	result := make(controlGroup, 0)
 	for i := 0; i < value.NumField(); i++ {
 		field := value.Field(i)
 		structField := value.Type().Field(i)
