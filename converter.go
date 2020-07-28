@@ -26,23 +26,13 @@ func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (V
 		return nil, errors.New("address of value is nil")
 	}
 
-	fieldAddrIface := fieldAddr.Interface()
-
 	if value.Type().Implements(valueControlType) {
 		log.Printf("adding ValueControl object %s implementing %s", value.Type(), valueControlType)
-		return fieldAddrIface.(ValueControl), nil
+		return fieldAddr.Interface().(ValueControl), nil
 	} else if value.Kind() == reflect.Array {
-		if controlFactory, err := arrayBreakdown(value, properties); err != nil {
-			return nil, err
-		} else {
-			return controlFactory, nil
-		}
+		return arrayBreakdown(value, properties)
 	} else if value.Kind() == reflect.Struct {
-		if group, err := structBreakdown(fieldAddr); err != nil {
-			return nil, err
-		} else {
-			return group, nil
-		}
+		return structBreakdown(fieldAddr)
 	} else if _, ok := builtin[value.Kind()]; ok {
 		log.Printf("adding builtin object %s kind %s", value.Type(), value.Kind())
 		onchanged := func() {}
@@ -91,11 +81,11 @@ func fieldBreakdown(field reflect.Value, structField reflect.StructField) (Value
 	}
 
 	if properties.Name == "" {
-		properties.Name = structField.Name
+		properties.Name = Label(structField.Name)
 	}
 
 	if factory, err := fieldValueBreakdown(field, properties); err != nil {
-		return structGuiField{}, err
+		return nil, err
 	} else {
 		return structGuiField{
 			Properties: properties,
@@ -121,7 +111,7 @@ func structBreakdown(reflectValue reflect.Value) (ValueControl, error) {
 		return nil, errors.New(fmt.Sprintf("structPtr should be a pointer to a struct type, got pointer to %s", value.Kind()))
 	}
 
-	result := make(controlGroup, 0)
+	result := make(controlGroup, 0, value.NumField())
 	for i := 0; i < value.NumField(); i++ {
 		field := value.Field(i)
 		structField := value.Type().Field(i)

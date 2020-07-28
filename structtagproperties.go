@@ -11,7 +11,7 @@ const (
 
 // StructTagProperties represents the values supported in a uiconf struct tag
 type StructTagProperties struct {
-	Name       string `json:"name,omitempty"`
+	Name       Label  `json:"name,omitempty"`
 	Type       string `json:"type,omitempty"`
 	Min        int    `json:"min,omitempty"`
 	Max        int    `json:"max,omitempty"`

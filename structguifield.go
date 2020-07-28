@@ -10,7 +10,8 @@ type structGuiField struct {
 func (s structGuiField) Create() ui.Control {
 	hbox := ui.NewHorizontalBox()
 	hbox.SetPadded(true)
-	hbox.Append(ui.NewLabel(s.Properties.Name), false)
+
+	hbox.Append(s.Properties.Name.Create(), false)
 	hbox.Append(s.Factory.Create(), true)
 
 	return hbox
