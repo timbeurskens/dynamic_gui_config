@@ -37,8 +37,8 @@ func setup() {
 	window.SetMargined(true)
 	window.SetChild(tab)
 
-	// prevent destroy of window
 	window.OnClosing(func(w *ui.Window) bool {
+		ui.Quit()
 		return true
 	})
 }
@@ -104,6 +104,7 @@ func NewTab(name string, handle ValueControl) {
 
 // Show displays the configuration window
 func Show() {
+	check()
 	ui.QueueMain(window.Show)
 }
 
