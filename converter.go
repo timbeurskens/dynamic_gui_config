@@ -1,104 +1,16 @@
 package dynamic_gui_config
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"reflect"
-
-	"github.com/andlabs/ui"
 )
 
 var (
 	valueControlType = reflect.TypeOf((*ValueControl)(nil)).Elem()
 	onChangedType    = reflect.TypeOf((*UpdateNotifier)(nil)).Elem()
 )
-
-const (
-	tagkey = "uiconf"
-)
-
-type ValueControlFunc func() ui.Control
-
-func (v ValueControlFunc) Create() ui.Control {
-	return v()
-}
-
-// UpdateNotifier is an interface type a user can implement to get notified when a value changes
-type UpdateNotifier interface {
-	// OnValueChanged will be called when the user changes the value using the graphical interface
-	OnValueChanged()
-}
-
-type ValueControl interface {
-	Create() ui.Control
-}
-
-type horizontalValueControlArray []ValueControl
-
-func (h horizontalValueControlArray) Create() ui.Control {
-	hbox := ui.NewHorizontalBox()
-
-	for _, control := range h {
-		hbox.Append(control.Create(), true)
-	}
-
-	return hbox
-}
-
-type controlGroup []structGuiField
-
-func (c controlGroup) Create() ui.Control {
-	container := ui.NewVerticalBox()
-	container.SetPadded(true)
-
-	for _, field := range c {
-		container.Append(field.Create(), false)
-	}
-
-	return container
-}
-
-type StructTagProperties struct {
-	Name       string `json:"name,omitempty"`
-	Type       string `json:"type,omitempty"`
-	Min        int    `json:"min,omitempty"`
-	Max        int    `json:"max,omitempty"`
-	Resolution int    `json:"resolution,omitempty"`
-}
-
-type structGuiField struct {
-	Properties StructTagProperties
-	Factory    ValueControl
-}
-
-func (s structGuiField) Create() ui.Control {
-	hbox := ui.NewHorizontalBox()
-	hbox.SetPadded(true)
-	hbox.Append(ui.NewLabel(s.Properties.Name), false)
-	hbox.Append(s.Factory.Create(), true)
-
-	return hbox
-}
-
-func parseStructTag(tag string) (properties StructTagProperties, err error) {
-	properties = StructTagProperties{
-		Name:       "",
-		Type:       "",
-		Min:        0,
-		Max:        100,
-		Resolution: 10,
-	}
-
-	if tag == "" {
-		err = errors.New("empty tag, using defaults")
-		return
-	}
-
-	err = json.Unmarshal([]byte(tag), &properties)
-	return
-}
 
 func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (ValueControl, error) {
 	if !value.CanAddr() {
@@ -172,8 +84,8 @@ func arrayBreakdown(array reflect.Value, properties StructTagProperties) (ValueC
 	return result, nil
 }
 
-func fieldBreakdown(field reflect.Value, structField reflect.StructField) (structGuiField, error) {
-	properties, err := parseStructTag(structField.Tag.Get(tagkey))
+func fieldBreakdown(field reflect.Value, structField reflect.StructField) (ValueControl, error) {
+	properties, err := ParseStructTag(structField.Tag.Get(tagkey))
 	if err != nil {
 		log.Printf("error parsing struct tag: %s", err)
 	}
@@ -192,12 +104,12 @@ func fieldBreakdown(field reflect.Value, structField reflect.StructField) (struc
 	}
 }
 
-func structBreakdownBase(structPtr interface{}) (controlGroup, error) {
+func structBreakdownBase(structPtr interface{}) (ValueControl, error) {
 	reflectValue := reflect.ValueOf(structPtr)
 	return structBreakdown(reflectValue)
 }
 
-func structBreakdown(reflectValue reflect.Value) (controlGroup, error) {
+func structBreakdown(reflectValue reflect.Value) (ValueControl, error) {
 	if reflectValue.Kind() != reflect.Ptr {
 		return nil, errors.New(fmt.Sprintf("structPtr should be a pointer to a struct type, got %d", reflectValue.Kind()))
 	}
