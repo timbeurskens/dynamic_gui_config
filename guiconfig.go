@@ -13,13 +13,14 @@ var (
 	windowWidth  int
 	windowHeight int
 
-	window *ui.Window = nil
-	tab    *ui.Tab    = nil
+	window *ui.Window           = nil
+	tab    *ui.Tab              = nil
+	closer *ControlCloseWrapper = nil
 )
 
 // perform a check on global variables, panic if check fails
 func check() {
-	if window == nil || tab == nil {
+	if window == nil || tab == nil || closer == nil {
 		panic("window pointer is nil, did you call Start()?")
 	}
 }
@@ -29,13 +30,15 @@ func setup() {
 		window.Destroy()
 		window = nil
 		tab = nil
+		closer = nil
 		return true
 	})
 
 	window = ui.NewWindow(windowName, windowWidth, windowHeight, true)
 	tab = ui.NewTab()
+	closer = NewControlCloseWrapper(tab)
 	window.SetMargined(true)
-	window.SetChild(tab)
+	window.SetChild(closer)
 
 	window.OnClosing(func(w *ui.Window) bool {
 		ui.Quit()
