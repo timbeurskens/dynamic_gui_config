@@ -52,6 +52,8 @@ func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (V
 
 			if controlFactory := builtin[value.Kind()](valueConverted.Interface(), properties, onchanged); controlFactory != nil {
 				return controlFactory, nil
+			} else {
+				return nil, errors.New(fmt.Sprintf("cannot create builtin object %s", value.Kind()))
 			}
 		} else {
 			return nil, errors.New(fmt.Sprintf("cannot convert %s to %s", fieldAddr.Type(), kindType))

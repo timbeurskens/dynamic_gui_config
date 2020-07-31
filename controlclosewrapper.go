@@ -7,17 +7,22 @@ import (
 	"github.com/andlabs/ui"
 )
 
+// CloseFunc is a function type implementing the io.Closer interface
 type CloseFunc func() error
 
+// Close runs given the close function
 func (c CloseFunc) Close() error {
 	return c()
 }
 
+// ControlCloseWrapper acts as a ui.Control and supports close functions.
+// This can be used to wrap a control and run a close function when the control gets destroyed.
 type ControlCloseWrapper struct {
 	Child        ui.Control
 	CloseHandles []io.Closer
 }
 
+// NewControlCloseWrapper creates a ControlCloseWrapper with the given control type as child element
 func NewControlCloseWrapper(child ui.Control) *ControlCloseWrapper {
 	return &ControlCloseWrapper{
 		Child:        child,
@@ -25,6 +30,7 @@ func NewControlCloseWrapper(child ui.Control) *ControlCloseWrapper {
 	}
 }
 
+// AddClosers adds the given io.Closer objects to the ControlCloseWrapper container
 func (c *ControlCloseWrapper) AddClosers(closer ...io.Closer) {
 	c.CloseHandles = append(c.CloseHandles, closer...)
 }
