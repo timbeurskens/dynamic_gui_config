@@ -46,3 +46,9 @@ func main() {
 	}
 }
 ```
+
+## Known issues
+
+### Exit code -1073741511 (0xC0000139) on Windows
+
+**Solution:** make sure to include a windows manifest file your application (e.g. `import _ github.com/andlabs/ui/winmanifest`)
