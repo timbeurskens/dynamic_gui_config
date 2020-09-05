@@ -96,7 +96,7 @@ var builtin = map[reflect.Kind]func(i interface{}, properties StructTagPropertie
 		}
 
 		return ValueControlFunc(func() ui.Control {
-			button := ui.NewButton("trigger")
+			button := ui.NewButton(string(properties.Name))
 			button.OnClicked(func(button *ui.Button) {
 				go callback()
 			})
