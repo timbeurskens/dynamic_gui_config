@@ -13,3 +13,15 @@ func (h horizontalValueControlArray) Create() ui.Control {
 
 	return hbox
 }
+
+type verticalValueControlArray []ValueControl
+
+func (v verticalValueControlArray) Create() ui.Control {
+	vbox := ui.NewVerticalBox()
+
+	for _, control := range v {
+		vbox.Append(control.Create(), true)
+	}
+
+	return vbox
+}

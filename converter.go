@@ -29,11 +29,11 @@ func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (V
 	if value.Type().Implements(valueControlType) {
 		log.Printf("adding ValueControl object %s implementing %s", value.Type(), valueControlType)
 		return fieldAddr.Interface().(ValueControl), nil
-	} else if value.Kind() == reflect.Array {
+	} else if value.Kind() == reflect.Array || value.Kind() == reflect.Slice {
 		return arrayBreakdown(value, properties)
 	} else if value.Kind() == reflect.Struct {
 		return structBreakdown(fieldAddr)
-	} else if _, ok := builtin[value.Kind()]; ok {
+	} else if bIn, ok := builtin[value.Kind()]; ok {
 		log.Printf("adding builtin object %s kind %s", value.Type(), value.Kind())
 		onchanged := func() {}
 
@@ -50,7 +50,7 @@ func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (V
 		if ok && fieldAddr.Type().ConvertibleTo(kindType) {
 			valueConverted := fieldAddr.Convert(typedKind[value.Kind()])
 
-			if controlFactory := builtin[value.Kind()](valueConverted.Interface(), properties, onchanged); controlFactory != nil {
+			if controlFactory := bIn(valueConverted.Interface(), properties, onchanged); controlFactory != nil {
 				return controlFactory, nil
 			} else {
 				return nil, errors.New(fmt.Sprintf("cannot create builtin object %s", value.Kind()))
@@ -63,7 +63,7 @@ func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (V
 }
 
 func arrayBreakdown(array reflect.Value, properties StructTagProperties) (ValueControl, error) {
-	result := make(horizontalValueControlArray, 0)
+	result := make([]ValueControl, 0)
 
 	for i := 0; i < array.Len(); i++ {
 		if valueBreakdown, err := fieldValueBreakdown(array.Index(i), properties); err != nil {
@@ -73,7 +73,11 @@ func arrayBreakdown(array reflect.Value, properties StructTagProperties) (ValueC
 		}
 	}
 
-	return result, nil
+	if properties.Vertical {
+		return verticalValueControlArray(result), nil
+	} else {
+		return horizontalValueControlArray(result), nil
+	}
 }
 
 func fieldBreakdown(field reflect.Value, structField reflect.StructField) (ValueControl, error) {

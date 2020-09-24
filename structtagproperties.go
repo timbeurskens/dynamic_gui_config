@@ -16,6 +16,7 @@ type StructTagProperties struct {
 	Min        int    `json:"min,omitempty"`
 	Max        int    `json:"max,omitempty"`
 	Resolution int    `json:"resolution,omitempty"`
+	Vertical   bool   `json:"vertical,omitempty"`
 }
 
 var structTagDefaults = StructTagProperties{
@@ -24,6 +25,7 @@ var structTagDefaults = StructTagProperties{
 	Min:        0,
 	Max:        100,
 	Resolution: 10,
+	Vertical:   false,
 }
 
 // Parse decodes the json format tag string into the current properties pointer
