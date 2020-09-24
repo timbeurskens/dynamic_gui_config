@@ -12,6 +12,27 @@ var (
 	onChangedType    = reflect.TypeOf((*UpdateNotifier)(nil)).Elem()
 )
 
+// new
+
+func MakeValueControl(object interface{}) (ValueControl, error) {
+	return MakeValueControlFromValue(reflect.ValueOf(object), structTagDefaults)
+}
+
+func MakeValueControlFromValue(value reflect.Value, properties StructTagProperties) (ValueControl, error) {
+	switch value.Kind() {
+	case reflect.Ptr:
+		return MakeValueControlFromValue(value.Elem(), properties)
+	case reflect.Struct:
+		return structBreakdown(value, properties)
+	case reflect.Array, reflect.Slice:
+		return arrayBreakdown(value, properties)
+	default:
+		return fieldValueBreakdown(value, properties)
+	}
+}
+
+// old
+
 func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (ValueControl, error) {
 	if !value.CanAddr() {
 		return nil, errors.New("cannot take address of value")
@@ -32,7 +53,7 @@ func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (V
 	} else if value.Kind() == reflect.Array || value.Kind() == reflect.Slice {
 		return arrayBreakdown(value, properties)
 	} else if value.Kind() == reflect.Struct {
-		return structBreakdown(fieldAddr)
+		return structBreakdown(fieldAddr, properties)
 	} else if bIn, ok := builtin[value.Kind()]; ok {
 		log.Printf("adding builtin object %s kind %s", value.Type(), value.Kind())
 		onchanged := func() {}
@@ -100,12 +121,7 @@ func fieldBreakdown(field reflect.Value, structField reflect.StructField) (Value
 	}
 }
 
-func structBreakdownBase(structPtr interface{}) (ValueControl, error) {
-	reflectValue := reflect.ValueOf(structPtr)
-	return structBreakdown(reflectValue)
-}
-
-func structBreakdown(reflectValue reflect.Value) (ValueControl, error) {
+func structBreakdown(reflectValue reflect.Value, properties StructTagProperties) (ValueControl, error) {
 	if reflectValue.Kind() != reflect.Ptr {
 		return nil, errors.New(fmt.Sprintf("structPtr should be a pointer to a struct type, got %d", reflectValue.Kind()))
 	}

@@ -84,7 +84,7 @@ func Register(name string, config interface{}) error {
 	// check ui instances
 	check()
 
-	fields, err := structBreakdownBase(config)
+	fields, err := MakeValueControl(config)
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,7 @@ import (
 
 var ButtonList = struct {
 	Buttons []func() `uiconf:"{\"vertical\":true}"`
+	Num     *int
 }{
 	Buttons: []func(){
 		func() {

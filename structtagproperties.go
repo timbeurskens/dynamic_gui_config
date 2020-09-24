@@ -28,6 +28,10 @@ var structTagDefaults = StructTagProperties{
 	Vertical:   false,
 }
 
+func DefaultProperties() StructTagProperties {
+	return structTagDefaults
+}
+
 // Parse decodes the json format tag string into the current properties pointer
 func (properties *StructTagProperties) Parse(tag string) error {
 	if tag == "" {
