@@ -83,7 +83,15 @@ func arrayBreakdown(array reflect.Value, properties StructTagProperties) (ValueC
 	result := make([]ValueControl, 0, array.Len())
 
 	for i := 0; i < array.Len(); i++ {
-		if valueBreakdown, err := MakeValueControlFromValue(array.Index(i), properties); err != nil {
+		currentProperties := properties
+
+		currentProperties.Index = i
+
+		if properties.Labels != nil && len(properties.Labels) > i {
+			currentProperties.Name = properties.Labels[i]
+		}
+
+		if valueBreakdown, err := MakeValueControlFromValue(array.Index(i), currentProperties); err != nil {
 			log.Printf("ignoring %s[%d]: %s", array.Type(), i, err)
 		} else {
 			result = append(result, valueBreakdown)
@@ -110,9 +118,9 @@ func fieldBreakdown(field reflect.Value, structField reflect.StructField) (Value
 	if factory, err := MakeValueControlFromValue(field, properties); err != nil {
 		return nil, err
 	} else {
-		return structGuiField{
-			Properties: properties,
-			Factory:    factory,
+		return LabeledGuiField{
+			Label:   properties.Name,
+			Factory: factory,
 		}, nil
 	}
 }
