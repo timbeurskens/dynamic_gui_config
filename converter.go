@@ -19,6 +19,18 @@ func MakeValueControl(object interface{}) (ValueControl, error) {
 }
 
 func MakeValueControlFromValue(value reflect.Value, properties StructTagProperties) (ValueControl, error) {
+	if !value.IsValid() {
+		return nil, errors.New("invalid value")
+	}
+
+	if !value.CanInterface() {
+		return nil, errors.New("cannot interface value")
+	}
+
+	if value.Type().Implements(valueControlType) {
+		return value.Interface().(ValueControl), nil
+	}
+
 	switch value.Kind() {
 	case reflect.Ptr:
 		return MakeValueControlFromValue(value.Elem(), properties)
@@ -37,29 +49,13 @@ func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (V
 	if !value.CanAddr() {
 		return nil, errors.New("cannot take address of value")
 	}
-	fieldAddr := value.Addr()
 
-	if !fieldAddr.CanInterface() {
-		return nil, errors.New("cannot take interface of value pointer")
-	}
-
-	if fieldAddr.IsNil() {
-		return nil, errors.New("address of value is nil")
-	}
-
-	if value.Type().Implements(valueControlType) {
-		log.Printf("adding ValueControl object %s implementing %s", value.Type(), valueControlType)
-		return fieldAddr.Interface().(ValueControl), nil
-	} else if value.Kind() == reflect.Array || value.Kind() == reflect.Slice {
-		return arrayBreakdown(value, properties)
-	} else if value.Kind() == reflect.Struct {
-		return structBreakdown(fieldAddr, properties)
-	} else if bIn, ok := builtin[value.Kind()]; ok {
+	if bIn, ok := builtin[value.Kind()]; ok {
 		log.Printf("adding builtin object %s kind %s", value.Type(), value.Kind())
 		onchanged := func() {}
 
-		if value.Type().Implements(onChangedType) {
-			iface, ok := fieldAddr.Interface().(UpdateNotifier)
+		if value.Addr().Type().Implements(onChangedType) {
+			iface, ok := value.Addr().Interface().(UpdateNotifier)
 			if ok {
 				log.Printf("add onchanged handler for type %s", value.Type())
 				onchanged = iface.OnValueChanged
@@ -68,8 +64,8 @@ func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (V
 
 		kindType, ok := typedKind[value.Kind()]
 
-		if ok && fieldAddr.Type().ConvertibleTo(kindType) {
-			valueConverted := fieldAddr.Convert(typedKind[value.Kind()])
+		if ok && value.Addr().Type().ConvertibleTo(kindType) {
+			valueConverted := value.Addr().Convert(typedKind[value.Kind()])
 
 			if controlFactory := bIn(valueConverted.Interface(), properties, onchanged); controlFactory != nil {
 				return controlFactory, nil
@@ -77,27 +73,27 @@ func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (V
 				return nil, errors.New(fmt.Sprintf("cannot create builtin object %s", value.Kind()))
 			}
 		} else {
-			return nil, errors.New(fmt.Sprintf("cannot convert %s to %s", fieldAddr.Type(), kindType))
+			return nil, errors.New(fmt.Sprintf("cannot convert %s to %s", value.Type(), kindType))
 		}
 	}
 	return nil, errors.New(fmt.Sprintf("no match for %s", value.Type()))
 }
 
 func arrayBreakdown(array reflect.Value, properties StructTagProperties) (ValueControl, error) {
-	result := make([]ValueControl, 0)
+	result := make([]ValueControl, 0, array.Len())
 
 	for i := 0; i < array.Len(); i++ {
-		if valueBreakdown, err := fieldValueBreakdown(array.Index(i), properties); err != nil {
+		if valueBreakdown, err := MakeValueControlFromValue(array.Index(i), properties); err != nil {
 			log.Printf("ignoring %s[%d]: %s", array.Type(), i, err)
 		} else {
 			result = append(result, valueBreakdown)
 		}
 	}
 
-	if properties.Vertical {
-		return verticalValueControlArray(result), nil
-	} else {
+	if properties.Horizontal {
 		return horizontalValueControlArray(result), nil
+	} else {
+		return verticalValueControlArray(result), nil
 	}
 }
 
@@ -111,7 +107,7 @@ func fieldBreakdown(field reflect.Value, structField reflect.StructField) (Value
 		properties.Name = Label(structField.Name)
 	}
 
-	if factory, err := fieldValueBreakdown(field, properties); err != nil {
+	if factory, err := MakeValueControlFromValue(field, properties); err != nil {
 		return nil, err
 	} else {
 		return structGuiField{
@@ -121,19 +117,9 @@ func fieldBreakdown(field reflect.Value, structField reflect.StructField) (Value
 	}
 }
 
-func structBreakdown(reflectValue reflect.Value, properties StructTagProperties) (ValueControl, error) {
-	if reflectValue.Kind() != reflect.Ptr {
-		return nil, errors.New(fmt.Sprintf("structPtr should be a pointer to a struct type, got %d", reflectValue.Kind()))
-	}
+func structBreakdown(value reflect.Value, properties StructTagProperties) (ValueControl, error) {
+	result := make([]ValueControl, 0, value.NumField())
 
-	// should be safe now, already checked for pointer type
-	value := reflectValue.Elem()
-
-	if value.Kind() != reflect.Struct {
-		return nil, errors.New(fmt.Sprintf("structPtr should be a pointer to a struct type, got pointer to %s", value.Kind()))
-	}
-
-	result := make(controlGroup, 0, value.NumField())
 	for i := 0; i < value.NumField(); i++ {
 		field := value.Field(i)
 		structField := value.Type().Field(i)
@@ -145,5 +131,9 @@ func structBreakdown(reflectValue reflect.Value, properties StructTagProperties)
 		}
 	}
 
-	return result, nil
+	if properties.Horizontal {
+		return horizontalValueControlArray(result), nil
+	} else {
+		return verticalValueControlArray(result), nil
+	}
 }
