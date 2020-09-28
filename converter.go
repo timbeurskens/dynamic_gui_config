@@ -38,16 +38,44 @@ func MakeValueControlFromValue(value reflect.Value, properties StructTagProperti
 		return structBreakdown(value, properties)
 	case reflect.Array, reflect.Slice:
 		return arrayBreakdown(value, properties)
+	case reflect.Chan:
+		return chanBreakdown(value, properties)
 	default:
 		return fieldValueBreakdown(value, properties)
 	}
 }
 
-// old
+func chanBreakdown(value reflect.Value, properties StructTagProperties) (ValueControl, error) {
+	if value.IsNil() {
+		return nil, errors.New("chan type is nil")
+	}
+
+	if value.Type().ChanDir()|reflect.SendDir == 0 {
+		return nil, errors.New("chan cannot send")
+	}
+
+	vToSend := reflect.New(value.Type().Elem())
+
+	sendFn := func() {
+		value.TrySend(vToSend.Elem())
+	}
+
+	btnVc, err := MakeValueControlFromValue(reflect.ValueOf(&sendFn), properties)
+	if err != nil {
+		return nil, err
+	}
+
+	underlyingVc, err := MakeValueControlFromValue(vToSend, properties)
+	if err != nil {
+		return nil, err
+	}
+
+	return LabeledGuiField{Label: btnVc, Factory: underlyingVc}, nil
+}
 
 func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (ValueControl, error) {
 	if !value.CanAddr() {
-		return nil, errors.New("cannot take address of value")
+		return nil, errors.New(fmt.Sprintf("cannot take address of value, %s", value))
 	}
 
 	if bIn, ok := builtin[value.Kind()]; ok {
@@ -67,10 +95,10 @@ func fieldValueBreakdown(value reflect.Value, properties StructTagProperties) (V
 		if ok && value.Addr().Type().ConvertibleTo(kindType) {
 			valueConverted := value.Addr().Convert(typedKind[value.Kind()])
 
-			if controlFactory := bIn(valueConverted.Interface(), properties, onchanged); controlFactory != nil {
-				return controlFactory, nil
+			if controlFactory, err := bIn(valueConverted.Interface(), properties, onchanged); err != nil {
+				return nil, errors.New(fmt.Sprintf("error: %s for type %s", err, value.Kind()))
 			} else {
-				return nil, errors.New(fmt.Sprintf("cannot create builtin object %s", value.Kind()))
+				return controlFactory, nil
 			}
 		} else {
 			return nil, errors.New(fmt.Sprintf("cannot convert %s to %s", value.Type(), kindType))

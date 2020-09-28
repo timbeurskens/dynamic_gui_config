@@ -8,9 +8,13 @@ import (
 	_ "github.com/andlabs/ui/winmanifest"
 )
 
+var ic = make(chan int)
+
 var ButtonList = struct {
-	Buttons []func() `uiconf:"{\"vertical\":true, \"labels\":[\"Button 1\", \"Button 2 - the best\"]}"`
-	Num     *int
+	Buttons         []func() `uiconf:"{\"vertical\":true, \"labels\":[\"Button 1\", \"Button 2 - the best\"]}"`
+	Num             *int
+	BoolChanIllegal chan<- bool
+	IntChan         chan<- int
 }{
 	Buttons: []func(){
 		func() {
@@ -23,12 +27,19 @@ var ButtonList = struct {
 			fmt.Println("G'day from button 3")
 		},
 	},
+	IntChan: ic,
 }
 
 func main() {
 	config.Start("config", 640, 400)
 
 	_ = config.Register("buttons", &ButtonList)
+
+	go func() {
+		for b := range ic {
+			fmt.Println("int chan says: ", b)
+		}
+	}()
 
 	config.Show()
 
