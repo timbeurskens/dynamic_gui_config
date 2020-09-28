@@ -1,6 +1,7 @@
 package dynamic_gui_config
 
 import (
+	"errors"
 	"reflect"
 
 	"github.com/andlabs/ui"
@@ -17,11 +18,11 @@ var typedKind = map[reflect.Kind]reflect.Type{
 	reflect.Func:    reflect.TypeOf((*func())(nil)),
 }
 
-var builtin = map[reflect.Kind]func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl{
-	reflect.Float64: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
+var builtin = map[reflect.Kind]func(i interface{}, properties StructTagProperties, onchanged func()) (ValueControl, error){
+	reflect.Float64: func(i interface{}, properties StructTagProperties, onchanged func()) (ValueControl, error) {
 		value, ok := i.(*float64)
 		if !ok {
-			return nil
+			return nil, errors.New("could not convert i to float64")
 		}
 
 		return ValueControlFunc(func() ui.Control {
@@ -32,12 +33,12 @@ var builtin = map[reflect.Kind]func(i interface{}, properties StructTagPropertie
 				go onchanged()
 			})
 			return slider
-		})
+		}), nil
 	},
-	reflect.Float32: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
+	reflect.Float32: func(i interface{}, properties StructTagProperties, onchanged func()) (ValueControl, error) {
 		value, ok := i.(*float32)
 		if !ok {
-			return nil
+			return nil, errors.New("could not convert i to float32")
 		}
 
 		return ValueControlFunc(func() ui.Control {
@@ -48,12 +49,12 @@ var builtin = map[reflect.Kind]func(i interface{}, properties StructTagPropertie
 				go onchanged()
 			})
 			return slider
-		})
+		}), nil
 	},
-	reflect.Uint: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
+	reflect.Uint: func(i interface{}, properties StructTagProperties, onchanged func()) (ValueControl, error) {
 		value, ok := i.(*uint)
 		if !ok {
-			return nil
+			return nil, errors.New("could not convert i to uint")
 		}
 
 		return ValueControlFunc(func() ui.Control {
@@ -64,12 +65,12 @@ var builtin = map[reflect.Kind]func(i interface{}, properties StructTagPropertie
 				go onchanged()
 			})
 			return slider
-		})
+		}), nil
 	},
-	reflect.Int: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
+	reflect.Int: func(i interface{}, properties StructTagProperties, onchanged func()) (ValueControl, error) {
 		value, ok := i.(*int)
 		if !ok {
-			return nil
+			return nil, errors.New("could not convert i to int")
 		}
 
 		return ValueControlFunc(func() ui.Control {
@@ -80,19 +81,19 @@ var builtin = map[reflect.Kind]func(i interface{}, properties StructTagPropertie
 				go onchanged()
 			})
 			return slider
-		})
+		}), nil
 	},
-	reflect.Func: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
+	reflect.Func: func(i interface{}, properties StructTagProperties, onchanged func()) (ValueControl, error) {
 		callbackPtr, ok := i.(*func())
 		if !ok {
-			return nil
+			return nil, errors.New("could not convert i to func")
 		}
 
 		callback := *callbackPtr
 
 		// extra check for nil function pointers
 		if callback == nil {
-			return nil
+			return nil, errors.New("callback refers to nil")
 		}
 
 		return ValueControlFunc(func() ui.Control {
@@ -101,12 +102,12 @@ var builtin = map[reflect.Kind]func(i interface{}, properties StructTagPropertie
 				go callback()
 			})
 			return button
-		})
+		}), nil
 	},
-	reflect.String: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
+	reflect.String: func(i interface{}, properties StructTagProperties, onchanged func()) (ValueControl, error) {
 		value, ok := i.(*string)
 		if !ok {
-			return nil
+			return nil, errors.New("could not convert i to string")
 		}
 
 		return ValueControlFunc(func() ui.Control {
@@ -117,12 +118,12 @@ var builtin = map[reflect.Kind]func(i interface{}, properties StructTagPropertie
 				go onchanged()
 			})
 			return textbox
-		})
+		}), nil
 	},
-	reflect.Bool: func(i interface{}, properties StructTagProperties, onchanged func()) ValueControl {
+	reflect.Bool: func(i interface{}, properties StructTagProperties, onchanged func()) (ValueControl, error) {
 		value, ok := i.(*bool)
 		if !ok {
-			return nil
+			return nil, errors.New("could not convert i to bool")
 		}
 
 		return ValueControlFunc(func() ui.Control {
@@ -133,6 +134,6 @@ var builtin = map[reflect.Kind]func(i interface{}, properties StructTagPropertie
 				go onchanged()
 			})
 			return check
-		})
+		}), nil
 	},
 }
