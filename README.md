@@ -47,6 +47,12 @@ func main() {
 }
 ```
 
+## Supported types
+
+### Custom types
+
+
+
 ## Known issues
 
 ### Exit code -1073741511 (0xC0000139) on Windows

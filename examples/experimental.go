@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 
+	"github.com/andlabs/ui"
+
 	config "github.com/timbeurskens/dynamic_gui_config"
 
 	_ "github.com/andlabs/ui/winmanifest"
@@ -10,11 +12,20 @@ import (
 
 var ic = make(chan int)
 
+type X struct {
+	Value int
+}
+
+func (x X) Create() ui.Control {
+	return ui.NewProgressBar()
+}
+
 var ButtonList = struct {
 	Buttons         []func() `uiconf:"{\"vertical\":true, \"labels\":[\"Button 1\", \"Button 2 - the best\"]}"`
 	Num             *int
 	BoolChanIllegal chan<- bool
 	IntChan         chan<- int
+	Hoi             X
 }{
 	Buttons: []func(){
 		func() {
