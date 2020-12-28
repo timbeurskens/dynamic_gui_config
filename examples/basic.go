@@ -16,6 +16,8 @@ func (i IntNotifier) OnValueChanged() {
 	log.Println("value changed: ", i)
 }
 
+var bb bool = false
+
 type ApplicationConfig struct {
 	SomeFloatValue    float64 `uiconf:"{\"name\":\"float value:\",\"min\":0,\"max\":1,\"resolution\":100}"`
 	SomeBool          bool
@@ -27,9 +29,10 @@ type ApplicationConfig struct {
 	notExported       int
 	FloatArray        [3]float64
 	SomeSubStruct     struct {
-		SomeSubInt int
-		AnotherInt int
-		SomeBool   bool
+		SomeSubInt  int
+		AnotherInt  int
+		SomeBool    bool
+		SomeBoolPtr *bool
 	}
 }
 
@@ -41,12 +44,18 @@ var Config1 = ApplicationConfig{
 	SomeFunction: func() {
 		fmt.Println("Hello, world!")
 	},
+	SomeSubStruct: struct {
+		SomeSubInt  int
+		AnotherInt  int
+		SomeBool    bool
+		SomeBoolPtr *bool
+	}{SomeBoolPtr: &bb},
 }
 
 func main() {
 	config.Start("config", 640, 400)
 
-	_ = config.Register("panel1", &Config1)
+	fmt.Println(config.Register("panel1", &Config1))
 
 	config.Show()
 

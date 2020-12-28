@@ -11,11 +11,14 @@ const (
 
 // StructTagProperties represents the values supported in a uiconf struct tag
 type StructTagProperties struct {
-	Name       Label  `json:"name,omitempty"`
-	Type       string `json:"type,omitempty"`
-	Min        int    `json:"min,omitempty"`
-	Max        int    `json:"max,omitempty"`
-	Resolution int    `json:"resolution,omitempty"`
+	Name       Label   `json:"name,omitempty"`
+	Type       string  `json:"type,omitempty"`
+	Min        int     `json:"min,omitempty"`
+	Max        int     `json:"max,omitempty"`
+	Resolution int     `json:"resolution,omitempty"`
+	Horizontal bool    `json:"horizontal,omitempty"`
+	Index      int     `json:"index,omitempty"`
+	Labels     []Label `json:"labels,omitempty"`
 }
 
 var structTagDefaults = StructTagProperties{
@@ -24,6 +27,13 @@ var structTagDefaults = StructTagProperties{
 	Min:        0,
 	Max:        100,
 	Resolution: 10,
+	Horizontal: false,
+	Index:      -1,
+	Labels:     nil,
+}
+
+func DefaultProperties() StructTagProperties {
+	return structTagDefaults
 }
 
 // Parse decodes the json format tag string into the current properties pointer
