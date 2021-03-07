@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"strconv"
 )
 
 var (
@@ -117,6 +118,10 @@ func arrayBreakdown(array reflect.Value, properties StructTagProperties) (ValueC
 
 		if properties.Labels != nil && len(properties.Labels) > i {
 			currentProperties.Name = properties.Labels[i]
+		}
+
+		if currentProperties.Name == "" {
+			currentProperties.Name = Label(strconv.Itoa(i))
 		}
 
 		if valueBreakdown, err := MakeValueControlFromValue(array.Index(i), currentProperties); err != nil {
