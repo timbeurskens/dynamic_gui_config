@@ -21,7 +21,7 @@ func (x X) Create() ui.Control {
 }
 
 var ButtonList = struct {
-	Buttons         []func() `uiconf:"{\"vertical\":true, \"labels\":[\"Button 1\", \"Button 2 - the best\"]}"`
+	Buttons         []func() `uiconf:"{\"name\": \"omit\", \"vertical\":true, \"labels\":[\"Button 1\", \"Button 2 - the best\"]}"`
 	Num             *int
 	BoolChanIllegal chan<- bool
 	IntChan         chan<- int
@@ -44,7 +44,7 @@ var ButtonList = struct {
 func main() {
 	config.Start("config", 640, 400)
 
-	_ = config.Register("buttons", &ButtonList)
+	_ = config.Register("buttonsTab", &ButtonList)
 
 	go func() {
 		for b := range ic {

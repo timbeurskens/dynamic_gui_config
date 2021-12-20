@@ -151,10 +151,14 @@ func fieldBreakdown(field reflect.Value, structField reflect.StructField) (Value
 	if factory, err := MakeValueControlFromValue(field, properties); err != nil {
 		return nil, err
 	} else {
-		return LabeledGuiField{
-			Label:   properties.Name,
-			Factory: factory,
-		}, nil
+		if properties.Name == "omit" {
+			return factory, nil
+		} else {
+			return LabeledGuiField{
+				Label:   properties.Name,
+				Factory: factory,
+			}, nil
+		}
 	}
 }
 
